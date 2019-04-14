@@ -63,10 +63,6 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_customer_main);
 
-        //Payment System
-        simplify = new Simplify();
-        simplify.setApiKey("sbpb_ZWQ0M2Q4ZWMtMmJhOC00N2ZjLThjMGMtYjljYTJkMWM2NzFm");
-
         //DRAWER AND TOOLBAR
         drawerLayout = findViewById(R.id.drawer_layout);
 
@@ -125,8 +121,6 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
 
         scanQR = (Button) findViewById(R.id.connectToTable);
         scanQR.setOnClickListener(this);
-
-
 
         welcomeTextView();
         billListView();
