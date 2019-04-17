@@ -1,6 +1,7 @@
 package com.example.ezserve;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
@@ -54,15 +55,15 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
     private ArrayList<String> billList;
     private ArrayAdapter<String> adapterR;
     BillHistory billHistory;
-    Simplify simplify;
     private DrawerLayout drawerLayout;
+    private ProgressDialog progressDialog;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_customer_main);
-
+        progressDialog = new ProgressDialog(this);
         //DRAWER AND TOOLBAR
         drawerLayout = findViewById(R.id.drawer_layout);
 
@@ -97,8 +98,6 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
                     }
                 });
 
-        //DRAWER AND TOOLBAR
-
         firebaseAuth = firebaseAuth.getInstance();
         userId = firebaseAuth.getCurrentUser().getUid();
         ref = firebaseDatabase.getInstance().getReference("Users").child(userId);
@@ -124,6 +123,7 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
 
         welcomeTextView();
         billListView();
+
     }
 
     @Override
@@ -138,6 +138,8 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
 
 
     public void welcomeTextView(){
+        progressDialog.setMessage("Loading...");
+        progressDialog.show();
         //Get First Name and welcome the user
         welcomeText = (TextView) findViewById(R.id.welcomeCustomer);
         ref.addValueEventListener(new ValueEventListener() {
@@ -151,7 +153,6 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
 
             }
         });
-
     }
 
     public void billListView(){
@@ -171,6 +172,7 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
                             billHistory.getDate() + "\nTotal: $" + billHistory.getTotal());
                 }
                 customerList.setAdapter(adapterR);
+                progressDialog.cancel();
             }
 
             @Override

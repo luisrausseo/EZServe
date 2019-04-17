@@ -1,8 +1,10 @@
 package com.example.ezserve;
 
+import android.app.ProgressDialog;
+import android.content.Intent;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -26,20 +28,19 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.simplify.android.sdk.Card;
 import com.simplify.android.sdk.CardToken;
+import com.simplify.android.sdk.Customer;
 import com.simplify.android.sdk.Simplify;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class PayForItems extends AppCompatActivity  implements AdapterView.OnItemSelectedListener, View.OnClickListener {
+public class PayForItems  extends AppCompatActivity  implements AdapterView.OnItemSelectedListener, View.OnClickListener {
     private Button confirmPay;
     private DatabaseReference ref,resRef,mRef;
     private ArrayList<String> itemsList;
@@ -60,16 +61,18 @@ public class PayForItems extends AppCompatActivity  implements AdapterView.OnIte
     private Simplify simplify;
     private String publicAPIkey = "sbpb_ZWQ0M2Q4ZWMtMmJhOC00N2ZjLThjMGMtYjljYTJkMWM2NzFm";
     public String paymentStatus = "Not Processed!";
+    private ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pay_for_items);
+        progressDialog = new ProgressDialog(this);
         firebaseAuth = firebaseAuth.getInstance();
         tableChild = cM.tableReferenceString;
         restaurantChild = cM.restaurantReferenceString;
         ref = FirebaseDatabase.getInstance().getReference().child("Connection").child(restaurantChild).child(tableChild);
-        mRef = FirebaseDatabase.getInstance().getReference("Users").child(CustomerMainActivity.userId).child("payment");
+        mRef = FirebaseDatabase.getInstance().getReference("Users").child(CustomerMainActivity.userId);
 
         df = new DecimalFormat("#.00");
 
@@ -91,7 +94,7 @@ public class PayForItems extends AppCompatActivity  implements AdapterView.OnIte
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 cards = new ArrayList<String>();
 
-                for (DataSnapshot cardsSnapshot: dataSnapshot.getChildren()) {
+                for (DataSnapshot cardsSnapshot: dataSnapshot.child("payment").getChildren()) {
                     String cardNum = cardsSnapshot.child("number").getValue(String.class);
                     String lastFourDigits = cardNum.substring(cardNum.length() - 4);
                     cards.add(lastFourDigits);
@@ -159,13 +162,14 @@ public class PayForItems extends AppCompatActivity  implements AdapterView.OnIte
                 //...
             }
         });
-
     }
 
     //Button pressed handler
     @Override
     public void onClick(View view) {
         if(view == confirmPay){
+            progressDialog.setMessage("Processing...");
+            progressDialog.show();
             final RequestQueue MyRequestQueue = Volley.newRequestQueue(this);
             simplify = new Simplify();
             simplify.setApiKey(publicAPIkey);
@@ -173,18 +177,25 @@ public class PayForItems extends AppCompatActivity  implements AdapterView.OnIte
             mRef.addValueEventListener(new ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                    String number = dataSnapshot.child(Integer.toString(cardSelected)).child("number").getValue(String.class);
-                    String exp_month = dataSnapshot.child(Integer.toString(cardSelected)).child("exp_month").getValue(String.class);
-                    String exp_year = dataSnapshot.child(Integer.toString(cardSelected)).child("exp_year").getValue(String.class);
-                    String CVC = dataSnapshot.child(Integer.toString(cardSelected)).child("CVV").getValue(String.class);
-                    String zipcode = dataSnapshot.child(Integer.toString(cardSelected)).child("zipcode").getValue(String.class);
+                    String number = dataSnapshot.child("payment").child(Integer.toString(cardSelected)).child("number").getValue(String.class);
+                    String exp_month = dataSnapshot.child("payment").child(Integer.toString(cardSelected)).child("exp_month").getValue(String.class);
+                    String exp_year = dataSnapshot.child("payment").child(Integer.toString(cardSelected)).child("exp_year").getValue(String.class);
+                    String CVC = dataSnapshot.child("payment").child(Integer.toString(cardSelected)).child("CVV").getValue(String.class);
+                    String zipcode = dataSnapshot.child("payment").child(Integer.toString(cardSelected)).child("zipcode").getValue(String.class);
+                    String name = dataSnapshot.child("first name").getValue(String.class) + " " + dataSnapshot.child("last name").getValue(String.class);
+                    String email = dataSnapshot.child("email").getValue(String.class);
 
+                    Customer customer = new Customer()
+                                        .setName(name)
+                                        .setEmail(email);
+                    System.out.println(customer);
                     myCard = new Card()
                             .setNumber(number.replace(" ",""))
                             .setExpMonth(exp_month)
                             .setExpYear(exp_year.substring(exp_year.length() - 2))
                             .setCvc(CVC)
-                            .setAddressZip(zipcode);
+                            .setAddressZip(zipcode)
+                            .setCustomer(customer);
 
                     paymentStatus = number.replace(" ","") + "|" + exp_month+ "|" + exp_year+ "|" + CVC+ "|" + zipcode;
 
@@ -193,14 +204,23 @@ public class PayForItems extends AppCompatActivity  implements AdapterView.OnIte
                         @Override
                         public void onSuccess(final CardToken cardToken) {
                             try {
+
                                 String url = "http://ezserve.herokuapp.com/charge.php";
                                 StringRequest MyStringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
                                     @Override
                                     public void onResponse(String response) {
-                                        //This code is executed if the server responds, whether or not the response contains data.
-                                        //The String 'response' contains the server's response.
-                                        Toast.makeText(PayForItems.this, response, Toast.LENGTH_LONG).show();
-                                        //TODO: what to do if payment is approved or not.
+                                        progressDialog.cancel();
+                                        try {
+                                            JSONObject jsonObject = new JSONObject(response);
+                                            Toast.makeText(PayForItems.this, response, Toast.LENGTH_LONG).show();
+                                            if (jsonObject.get("status").toString().equals("APPROVED")) {
+                                                startActivity(new Intent(PayForItems.this, CustomerMainActivity.class).setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP));
+                                                //TODO: clear table and add it to customer's bills
+                                            }
+                                        } catch (JSONException e) {
+                                            //For debugging
+                                            Toast.makeText(PayForItems.this, e.getMessage(), Toast.LENGTH_LONG).show();
+                                        }
                                     }
                                 }, new Response.ErrorListener() { //Create an error listener to handle errors appropriately.
                                     @Override
@@ -217,9 +237,6 @@ public class PayForItems extends AppCompatActivity  implements AdapterView.OnIte
                                 };
 
                                 MyRequestQueue.add(MyStringRequest);
-
-
-                                //
                             } catch (Exception e) {
                                 Toast.makeText(PayForItems.this, e.toString(), Toast.LENGTH_LONG).show();
                             }
@@ -231,7 +248,6 @@ public class PayForItems extends AppCompatActivity  implements AdapterView.OnIte
                     });
 
                 }
-
                 @Override
                 public void onCancelled(@NonNull DatabaseError databaseError) {
                     paymentStatus = "Error 001";
