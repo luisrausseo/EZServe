@@ -53,6 +53,13 @@ public class signUp extends AppCompatActivity implements View.OnClickListener{
         signUpButton.setOnClickListener(this);
     }
 
+    @Override
+    public void onClick(View view) {
+        if(view == signUpButton){
+            register();
+        }
+    }
+
     private void register(){
         final String firstName = firstNameSignUp.getText().toString().trim();
         final String lastName = lastNameSignUp.getText().toString().trim();
@@ -63,7 +70,7 @@ public class signUp extends AppCompatActivity implements View.OnClickListener{
         //If any of the text views are not filled out there will be an error message to notify user
         if (TextUtils.isEmpty(firstName)||TextUtils.isEmpty(lastName)||TextUtils.isEmpty(email)
                 ||TextUtils.isEmpty(passwordOne)||TextUtils.isEmpty(passwordTwo)){
-            Toast.makeText(this, "Not all blanks are filled", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Must fill all the required fields", Toast.LENGTH_SHORT).show();
             return;
         }
         //Checks if both passwords match before making the account
@@ -108,10 +115,5 @@ public class signUp extends AppCompatActivity implements View.OnClickListener{
 
     }
 
-    @Override
-    public void onClick(View view) {
-        if(view == signUpButton){
-            register();
-        }
-    }
+
 }

@@ -1,7 +1,9 @@
 package com.example.ezserve;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
@@ -21,6 +23,7 @@ import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -46,7 +49,7 @@ import java.util.Map;
 public class CustomerMainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private FirebaseAuth firebaseAuth;
-    private Button signOut, scanQR;
+    private ImageButton scanQR;
     private TextView welcomeText;
     DatabaseReference ref, billRef, tableRef;
     private FirebaseDatabase firebaseDatabase;
@@ -80,7 +83,7 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
                     @Override
                     public boolean onNavigationItemSelected(MenuItem menuItem) {
                         // set item as selected to persist highlight
-                        menuItem.setChecked(true);
+                        menuItem.setChecked(false);
                         // close drawer when item is tapped
                         drawerLayout.closeDrawers();
 
@@ -91,6 +94,9 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
                                 return true;
                             case R.id.nav_payment:
                                 startActivity(new Intent(CustomerMainActivity.this, payments.class));
+                                return true;
+                            case R.id.nav_logout:
+                                logout();
                                 return true;
                             default:
                                 return true;
@@ -105,7 +111,7 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
         billRef = firebaseDatabase.getInstance().getReference("Users").child(userId).child("Bills");
 
         userCustomer = new userCustomer();
-        scanQR = (Button) findViewById(R.id.connectToTable);
+        scanQR = (ImageButton) findViewById(R.id.connectToTable);
         scanQR.setOnClickListener(this);
 
         //Get status of user and send to main activity if user is signed out
@@ -115,10 +121,8 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
             startActivity(new Intent(this, MainActivity.class));
         }
 
-        signOut = (Button) findViewById(R.id.signOutCustomer);
-        signOut.setOnClickListener(this);
 
-        scanQR = (Button) findViewById(R.id.connectToTable);
+        scanQR = (ImageButton) findViewById(R.id.connectToTable);
         scanQR.setOnClickListener(this);
 
         welcomeTextView();
@@ -209,6 +213,7 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
             }
         });
     }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
@@ -229,13 +234,13 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
         }
     }
 
+    @Override
+    public void onBackPressed() {
+        logout();
+    }
 
     @Override
     public void onClick(View view) {
-        if(view == signOut){
-            firebaseAuth.signOut();
-            finish();
-        }
         if(view == scanQR){
             final Activity activity = this;
             IntentIntegrator integrator = new IntentIntegrator(activity);
@@ -246,5 +251,28 @@ public class CustomerMainActivity extends AppCompatActivity implements View.OnCl
             integrator.setBarcodeImageEnabled(false);
             integrator.initiateScan();
         }
+    }
+
+    private void logout(){
+        DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                switch (which){
+                    case DialogInterface.BUTTON_POSITIVE:
+                        firebaseAuth.signOut();
+                        finish();
+                        break;
+
+                    case DialogInterface.BUTTON_NEGATIVE:
+                        //Do nothing
+                        break;
+                }
+            }
+        };
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Are you sure you want to exit?")
+                .setPositiveButton("Yes", dialogClickListener)
+                .setNegativeButton("No", dialogClickListener).show();
     }
 }
