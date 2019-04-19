@@ -182,20 +182,14 @@ public class PayForItems  extends AppCompatActivity  implements AdapterView.OnIt
                     String exp_year = dataSnapshot.child("payment").child(Integer.toString(cardSelected)).child("exp_year").getValue(String.class);
                     String CVC = dataSnapshot.child("payment").child(Integer.toString(cardSelected)).child("CVV").getValue(String.class);
                     String zipcode = dataSnapshot.child("payment").child(Integer.toString(cardSelected)).child("zipcode").getValue(String.class);
-                    String name = dataSnapshot.child("first name").getValue(String.class) + " " + dataSnapshot.child("last name").getValue(String.class);
-                    String email = dataSnapshot.child("email").getValue(String.class);
+                    final String payID = dataSnapshot.child("id").getValue(String.class);
 
-                    Customer customer = new Customer()
-                                        .setName(name)
-                                        .setEmail(email);
-                    System.out.println(customer);
                     myCard = new Card()
                             .setNumber(number.replace(" ",""))
                             .setExpMonth(exp_month)
                             .setExpYear(exp_year.substring(exp_year.length() - 2))
                             .setCvc(CVC)
-                            .setAddressZip(zipcode)
-                            .setCustomer(customer);
+                            .setAddressZip(zipcode);
 
                     paymentStatus = number.replace(" ","") + "|" + exp_month+ "|" + exp_year+ "|" + CVC+ "|" + zipcode;
 
@@ -204,8 +198,8 @@ public class PayForItems  extends AppCompatActivity  implements AdapterView.OnIt
                         @Override
                         public void onSuccess(final CardToken cardToken) {
                             try {
-
-                                String url = "http://ezserve.herokuapp.com/charge.php";
+                                System.out.println(cardToken.getId());
+                                String url = "http://ezservepayment.herokuapp.com/charge.php";
                                 StringRequest MyStringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
                                     @Override
                                     public void onResponse(String response) {
@@ -232,6 +226,7 @@ public class PayForItems  extends AppCompatActivity  implements AdapterView.OnIt
                                         Map<String, String> MyData = new HashMap<String, String>();
                                         MyData.put("simplifyToken", cardToken.getId()); //Send the card token with the request
                                         MyData.put("amount", String.valueOf(total*100)); //send the amount in cents
+                                        MyData.put("customer", payID); //send the customer id
                                         return MyData;
                                     }
                                 };
