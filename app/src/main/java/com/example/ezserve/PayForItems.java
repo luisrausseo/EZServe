@@ -198,7 +198,6 @@ public class PayForItems  extends AppCompatActivity  implements AdapterView.OnIt
                         @Override
                         public void onSuccess(final CardToken cardToken) {
                             try {
-                                System.out.println(cardToken.getId());
                                 String url = "http://ezservepayment.herokuapp.com/charge.php";
                                 StringRequest MyStringRequest = new StringRequest(Request.Method.POST, url, new Response.Listener<String>() {
                                     @Override
